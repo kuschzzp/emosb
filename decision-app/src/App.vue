@@ -33,10 +33,9 @@
     <MenuModal
         :showModal="showModal"
         :menuText="menuText"
-        @update:menuText="menuText = $event"
+        @update:showModal="showModal = $event"
         @save="saveMenu"
     />
-
   </el-container>
 </template>
 

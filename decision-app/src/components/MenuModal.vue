@@ -5,11 +5,11 @@
       width="50%"
       @close="handleClose"
   >
-    <el-textarea
+    <el-input type="textarea"
         v-model="localMenuText"
         rows="10"
         placeholder="请输入菜单项，每行一个"
-    ></el-textarea>
+    ></el-input>
     <span slot="footer" class="dialog-footer">
       <el-button @click="handleClose">取消</el-button>
       <el-button type="primary" @click="handleSave">保存</el-button>
