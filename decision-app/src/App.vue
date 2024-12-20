@@ -59,7 +59,7 @@ export default {
       selectedMenu: '',
       interval: null,
       showModal: false,
-      menuText: '',
+      menuText: this.menu,
     };
   },
   mounted() {
@@ -80,6 +80,7 @@ export default {
       }
     },
     saveMenu(menuText) {
+      this.showModal = false;
       const newMenu = menuText.split("\n").filter(item => item.trim() !== '');
       this.menu = newMenu;
       localStorage.setItem('chishenme_menu', JSON.stringify(this.menu));
