@@ -81,6 +81,45 @@ test('validateListDraft accepts a cleaned valid draft', () => {
   })
 })
 
+test('validateListDraft enforces name and item count limits', () => {
+  const longName = '清'.repeat(21)
+  const tooManyItems = Array.from(
+    { length: 201 },
+    (_, index) => `选项 ${index + 1}`
+  ).join('\n')
+
+  assert.deepEqual(
+    validateListDraft(
+      { name: longName, itemsText: 'A\nB' },
+      [],
+      ''
+    ),
+    { ok: false, field: 'name', message: '清单名称最多 20 个字符' }
+  )
+  assert.deepEqual(
+    validateListDraft(
+      { name: '超长清单', itemsText: tooManyItems },
+      [],
+      ''
+    ),
+    { ok: false, field: 'items', message: '每份清单最多 200 个选项' }
+  )
+})
+
+test('validateListDraft compares names after trimming and folding case', () => {
+  const result = validateListDraft(
+    { name: '  weekend  ', itemsText: 'A\nB' },
+    [{ id: 'existing', name: 'Weekend' }],
+    'new'
+  )
+
+  assert.deepEqual(result, {
+    ok: false,
+    field: 'name',
+    message: '已经有同名清单了'
+  })
+})
+
 test('loadState migrates the legacy menu', () => {
   const storage = createMemoryStorage({
     [LEGACY_STORAGE_KEY]: JSON.stringify(['面条', '米饭', '面条'])
@@ -115,6 +154,28 @@ test('loadState keeps valid lists from a partially damaged v2 payload', () => {
   assert.equal(state.activeListId, 'valid')
 })
 
+test('loadState removes duplicate ids and names and repairs the active list', () => {
+  const storage = createMemoryStorage({
+    [STORAGE_KEY]: JSON.stringify({
+      version: 2,
+      activeListId: 'missing',
+      lists: [
+        { id: 'first', name: '周末去哪', items: ['公园', '书店'] },
+        { id: 'first', name: '晚饭吃啥', items: ['面条', '米饭'] },
+        { id: 'third', name: ' 周末去哪 ', items: ['爬山', '看海'] },
+        { id: 'fourth', name: '买什么', items: ['咖啡', '茶'] }
+      ]
+    })
+  })
+  const state = loadState(storage, 100)
+
+  assert.deepEqual(
+    state.lists.map(list => list.id),
+    ['first', 'fourth']
+  )
+  assert.equal(state.activeListId, 'first')
+})
+
 test('loadState falls back safely when JSON is malformed', () => {
   const storage = createMemoryStorage({ [STORAGE_KEY]: '{bad json' })
   const state = loadState(storage, 100)
@@ -132,4 +193,18 @@ test('saveState persists at most six history entries per list', () => {
 
   const saved = JSON.parse(storage.getItem(STORAGE_KEY))
   assert.equal(saved.lists[0].history.length, MAX_HISTORY)
+})
+
+test('saveState rejects states without a valid list', () => {
+  const storage = createMemoryStorage()
+
+  assert.throws(
+    () => saveState(storage, {
+      version: 2,
+      activeListId: 'invalid',
+      lists: [{ id: 'invalid', name: '坏数据', items: ['只有一项'] }]
+    }),
+    /INVALID_STATE/
+  )
+  assert.equal(storage.getItem(STORAGE_KEY), null)
 })
