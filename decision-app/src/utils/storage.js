@@ -1,6 +1,8 @@
 const STORAGE_KEY = 'decision_app_state_v2'
 const LEGACY_STORAGE_KEY = 'chishenme_menu'
 const MAX_HISTORY = 6
+const MAX_LIST_NAME_LENGTH = 50
+const MAX_LIST_ITEMS = 500
 
 const DEFAULT_ITEMS = [
   '酸辣土豆丝',
@@ -16,21 +18,12 @@ const DEFAULT_ITEMS = [
   '菠萝咕噜肉',
   '咖喱鸡翅',
   '香辣牛肉',
-  '水煮鱼',
-  '酸菜鱼',
-  '虾皮鸡蛋羹',
   '皮蛋拌豆腐',
-  '清蒸大闸蟹',
-  '微波番茄虾',
-  '麻辣鱼',
   '宫保鸡丁',
   '家常豆腐',
   '皮蛋瘦肉粥',
   '红烧冬瓜',
   '湘式小炒五花肉',
-  '剁椒鱼头',
-  '红烧鱼块',
-  '清蒸鲈鱼',
   '酸辣汤',
   '秘制红焖羊肉',
   '酱牛肉',
@@ -73,23 +66,10 @@ const DEFAULT_ITEMS = [
   '洋葱炒鸡蛋',
   '尖椒干豆腐',
   '千页豆腐',
-  '红烧带鱼',
-  '清蒸多宝鱼',
-  '糖醋鲤鱼',
-  '干烧黄花鱼',
-  '香辣烤鱼',
-  '蒜蓉粉丝蒸扇贝',
-  '油焖大虾',
-  '白灼虾',
-  '香辣花甲',
-  '鱿鱼炒韭菜',
   '冬瓜排骨汤',
   '玉米排骨汤',
   '莲藕排骨汤',
-  '海带豆腐汤',
-  '紫菜蛋花汤',
   '番茄菌菇汤',
-  '鲫鱼豆腐汤',
   '小鸡炖蘑菇',
   '扬州炒饭',
   '腊味煲仔饭',
@@ -102,7 +82,89 @@ const DEFAULT_ITEMS = [
   '饺子',
   '馄饨',
   '生煎包',
-  '锅贴'
+  '锅贴',
+  '东坡肉',
+  '粉蒸肉',
+  '腐乳肉',
+  '锅包肉',
+  '小酥肉',
+  '红烧狮子头',
+  '肉末茄子',
+  '榨菜肉丝',
+  '芹菜炒肉',
+  '香干炒肉',
+  '莴笋炒肉',
+  '木耳炒肉',
+  '尖椒炒肉',
+  '土豆片炒肉',
+  '莲藕炒肉片',
+  '口水鸡',
+  '葱油鸡',
+  '盐焗鸡',
+  '板栗烧鸡',
+  '土豆烧鸡',
+  '香菇炖鸡',
+  '山药炖鸡',
+  '鸡米花',
+  '鸡肉咖喱',
+  '烤鸡腿',
+  '香酥鸭',
+  '土豆烧鸭',
+  '萝卜烧鸭',
+  '黑椒牛肉粒',
+  '红烧牛肉',
+  '萝卜炖牛腩',
+  '番茄肥牛',
+  '金针菇肥牛',
+  '牛肉炒饭',
+  '羊肉炖萝卜',
+  '红烧羊排',
+  '手抓羊肉',
+  '羊肉泡馍',
+  '烤羊肉串',
+  '蒜泥白肉',
+  '水煮牛肉',
+  '豆角焖肉',
+  '咸蛋黄豆腐',
+  '肉末豆腐',
+  '锅塌豆腐',
+  '白菜炖豆腐',
+  '香煎豆腐',
+  '豆腐煲',
+  '番茄烧豆腐',
+  '芹菜炒香干',
+  '青椒炒鸡蛋',
+  '苦瓜炒鸡蛋',
+  '蒜黄炒鸡蛋',
+  '木耳炒鸡蛋',
+  '鸡蛋羹',
+  '青椒土豆片',
+  '干锅土豆片',
+  '酸辣藕丁',
+  '清炒山药',
+  '清炒莴笋',
+  '清炒芦笋',
+  '蒜蓉油麦菜',
+  '清炒小白菜',
+  '白灼菜心',
+  '干锅包菜',
+  '红烧茄子',
+  '茄子烧豆角',
+  '西红柿烧茄子',
+  '香菇烧冬瓜',
+  '干锅杏鲍菇',
+  '菌菇煲',
+  '罗宋汤',
+  '冬瓜丸子汤',
+  '山药排骨汤',
+  '萝卜牛腩汤',
+  '西红柿鸡蛋汤',
+  '小米粥',
+  '南瓜粥',
+  '盖浇饭',
+  '咖喱鸡肉饭',
+  '鸡蛋炒饭',
+  '石锅拌饭'
 ]
 
 function normalizeItems(input) {
@@ -138,8 +200,12 @@ function validateListDraft(draft, lists = [], currentId = '') {
     return { ok: false, field: 'name', message: '请给清单起一个名字' }
   }
 
-  if (name.length > 20) {
-    return { ok: false, field: 'name', message: '清单名称最多 20 个字符' }
+  if (name.length > MAX_LIST_NAME_LENGTH) {
+    return {
+      ok: false,
+      field: 'name',
+      message: `清单名称最多 ${MAX_LIST_NAME_LENGTH} 个字符`
+    }
   }
 
   const normalizedName = name.toLocaleLowerCase()
@@ -157,8 +223,12 @@ function validateListDraft(draft, lists = [], currentId = '') {
     return { ok: false, field: 'items', message: '至少保留 2 个有效选项' }
   }
 
-  if (items.length > 200) {
-    return { ok: false, field: 'items', message: '每份清单最多 200 个选项' }
+  if (items.length > MAX_LIST_ITEMS) {
+    return {
+      ok: false,
+      field: 'items',
+      message: `每份清单最多 ${MAX_LIST_ITEMS} 个选项`
+    }
   }
 
   return { ok: true, name, items }
@@ -169,10 +239,11 @@ function createId(now) {
   return `list-${now}-${suffix}`
 }
 
-function createList(name, items, now = Date.now()) {
+function createList(name, items, now = Date.now(), isBuiltIn = false) {
   return {
     id: createId(now),
     name: String(name || '').trim(),
+    isBuiltIn: Boolean(isBuiltIn),
     items: normalizeItems(items),
     history: [],
     createdAt: now,
@@ -180,13 +251,26 @@ function createList(name, items, now = Date.now()) {
   }
 }
 
-function createDefaultState(now = Date.now(), items = DEFAULT_ITEMS) {
-  const list = createList('今天吃什么', items, now)
+function createDefaultState(
+  now = Date.now(),
+  items = DEFAULT_ITEMS,
+  isBuiltIn = true
+) {
+  const list = createList('今天吃什么', items, now, isBuiltIn)
 
   return {
     version: 2,
     activeListId: list.id,
     lists: [list]
+  }
+}
+
+function syncListWithDefaultItems(list, now = Date.now()) {
+  return {
+    ...list,
+    items: [...DEFAULT_ITEMS],
+    history: [],
+    updatedAt: now
   }
 }
 
@@ -198,13 +282,21 @@ function sanitizeList(raw, now) {
   const name = typeof raw.name === 'string' ? raw.name.trim() : ''
   const items = normalizeItems(raw.items)
 
-  if (!name || name.length > 20 || items.length < 2 || items.length > 200) {
+  if (
+    !name
+    || name.length > MAX_LIST_NAME_LENGTH
+    || items.length < 2
+    || items.length > MAX_LIST_ITEMS
+  ) {
     return null
   }
 
   return {
     id: typeof raw.id === 'string' && raw.id ? raw.id : createId(now),
     name,
+    isBuiltIn: typeof raw.isBuiltIn === 'boolean'
+      ? raw.isBuiltIn
+      : name === '今天吃什么',
     items,
     history: normalizeHistory(raw.history),
     createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : now,
@@ -279,7 +371,7 @@ function loadState(storage, now = Date.now()) {
     )
 
     if (legacyItems.length >= 2) {
-      const migrated = createDefaultState(now, legacyItems)
+      const migrated = createDefaultState(now, legacyItems, false)
       tryPersist(storage, migrated)
       return migrated
     }
@@ -307,10 +399,13 @@ module.exports = {
   LEGACY_STORAGE_KEY,
   DEFAULT_ITEMS,
   MAX_HISTORY,
+  MAX_LIST_NAME_LENGTH,
+  MAX_LIST_ITEMS,
   normalizeItems,
   validateListDraft,
   createList,
   createDefaultState,
+  syncListWithDefaultItems,
   loadState,
   saveState
 }

@@ -18,6 +18,7 @@
         :active-id="state.activeListId"
         :disabled="isRunning"
         @select="switchList"
+        @create="createNewList(true)"
         @manage="openManager"
       />
     </header>
@@ -65,6 +66,7 @@
       @select="switchList"
       @create="createNewList"
       @save="saveList"
+      @sync-defaults="syncDefaultItems"
       @remove="removeList"
     />
   </div>
@@ -77,10 +79,12 @@ import HistoryStrip from './components/HistoryStrip.vue'
 import MenuModal from './components/MenuModal.vue'
 
 const {
+  DEFAULT_ITEMS,
   MAX_HISTORY,
   createList,
   loadState,
   saveState,
+  syncListWithDefaultItems,
   validateListDraft
 } = require('./utils/storage')
 
@@ -219,7 +223,7 @@ export default {
 
       tick(0)
     },
-    createNewList() {
+    createNewList(openManager = false) {
       this.stopDraw()
 
       let index = 1
@@ -234,6 +238,10 @@ export default {
       this.state.lists.push(list)
       this.state.activeListId = list.id
       this.selectedValue = ''
+
+      if (openManager) {
+        this.managerVisible = true
+      }
 
       if (this.persist()) {
         this.$message.success('新清单已创建，可以开始填写选项了')
@@ -270,6 +278,45 @@ export default {
 
       if (this.persist()) {
         this.$message.success(`「${list.name}」已保存`)
+      }
+    },
+    async syncDefaultItems(id) {
+      const listIndex = this.state.lists.findIndex(item => item.id === id)
+
+      if (listIndex < 0) {
+        this.$message.error('没有找到这份清单，请重新选择')
+        return
+      }
+
+      const list = this.state.lists[listIndex]
+
+      try {
+        await this.$confirm(
+          `将用 ${DEFAULT_ITEMS.length} 道默认菜品覆盖「${list.name}」的候选项，并清空它的抽取记录。`,
+          '同步默认菜单？',
+          {
+            confirmButtonText: '确认同步',
+            cancelButtonText: '取消',
+            type: 'warning',
+            customClass: 'decision-confirm'
+          }
+        )
+      } catch {
+        return
+      }
+
+      this.stopDraw()
+      const syncedList = syncListWithDefaultItems(list)
+      this.$set(this.state.lists, listIndex, syncedList)
+
+      if (this.state.activeListId === id) {
+        this.selectedValue = ''
+      }
+
+      if (this.persist()) {
+        this.$message.success(
+          `「${syncedList.name}」已同步为 ${syncedList.items.length} 道默认菜品`
+        )
       }
     },
     async removeList(id) {

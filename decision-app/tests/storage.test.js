@@ -6,9 +6,13 @@ const {
   LEGACY_STORAGE_KEY,
   DEFAULT_ITEMS,
   MAX_HISTORY,
+  MAX_LIST_NAME_LENGTH,
+  MAX_LIST_ITEMS,
   normalizeItems,
   validateListDraft,
+  createList,
   createDefaultState,
+  syncListWithDefaultItems,
   loadState,
   saveState
 } = require('../src/utils/storage')
@@ -31,19 +35,62 @@ function createMemoryStorage(seed = {}) {
 
 test('normalizeItems trims blank lines and removes duplicates', () => {
   assert.deepEqual(
-    normalizeItems(' 酸菜鱼 \n\n火锅\n酸菜鱼\n  烤肉  '),
-    ['酸菜鱼', '火锅', '烤肉']
+    normalizeItems(' 面条 \n\n火锅\n面条\n  烤肉  '),
+    ['面条', '火锅', '烤肉']
   )
 })
 
-test('default menu contains 100 unique non-empty dish names', () => {
-  assert.equal(DEFAULT_ITEMS.length, 100)
-  assert.equal(new Set(DEFAULT_ITEMS).size, 100)
+test('default menu contains 160 unique non-empty dish names', () => {
+  assert.equal(DEFAULT_ITEMS.length, 160)
+  assert.equal(new Set(DEFAULT_ITEMS).size, 160)
   assert.ok(DEFAULT_ITEMS.every(item => (
     typeof item === 'string'
     && item.length > 0
     && item === item.trim()
   )))
+})
+
+test('default menu excludes seafood but keeps fish-fragrant dishes', () => {
+  const seafoodPattern = /鱼|虾|蟹|扇贝|花甲|鱿鱼|海带|紫菜/
+
+  assert.ok(DEFAULT_ITEMS.includes('鱼香肉丝'))
+  assert.ok(DEFAULT_ITEMS.includes('鱼香茄子'))
+  assert.ok(DEFAULT_ITEMS.every(item => (
+    !seafoodPattern.test(item.replace('鱼香', ''))
+  )))
+})
+
+test('syncListWithDefaultItems replaces items and clears history', () => {
+  const original = {
+    id: 'food',
+    name: '我的晚餐',
+    isBuiltIn: true,
+    items: ['旧选项一', '旧选项二'],
+    history: ['旧选项一'],
+    createdAt: 100,
+    updatedAt: 150
+  }
+
+  const synced = syncListWithDefaultItems(original, 200)
+
+  assert.deepEqual(synced, {
+    ...original,
+    items: DEFAULT_ITEMS,
+    history: [],
+    updatedAt: 200
+  })
+  assert.notEqual(synced, original)
+  assert.notEqual(synced.items, DEFAULT_ITEMS)
+  assert.deepEqual(original.items, ['旧选项一', '旧选项二'])
+  assert.deepEqual(original.history, ['旧选项一'])
+})
+
+test('default lists are built in while newly created lists are not', () => {
+  const defaultState = createDefaultState(100, ['A', 'B'])
+  const customList = createList('周末去哪', ['公园', '书店'], 200)
+
+  assert.equal(defaultState.lists[0].isBuiltIn, true)
+  assert.equal(customList.isBuiltIn, false)
 })
 
 test('validateListDraft rejects duplicate names and fewer than two items', () => {
@@ -82,11 +129,29 @@ test('validateListDraft accepts a cleaned valid draft', () => {
 })
 
 test('validateListDraft enforces name and item count limits', () => {
-  const longName = '清'.repeat(21)
-  const tooManyItems = Array.from(
-    { length: 201 },
+  const maxName = '清'.repeat(50)
+  const longName = '清'.repeat(51)
+  const maxItems = Array.from(
+    { length: 500 },
     (_, index) => `选项 ${index + 1}`
   ).join('\n')
+  const tooManyItems = Array.from(
+    { length: 501 },
+    (_, index) => `选项 ${index + 1}`
+  ).join('\n')
+
+  assert.equal(MAX_LIST_NAME_LENGTH, 50)
+  assert.equal(MAX_LIST_ITEMS, 500)
+
+  const validAtLimits = validateListDraft(
+    { name: maxName, itemsText: maxItems },
+    [],
+    ''
+  )
+
+  assert.equal(validAtLimits.ok, true)
+  assert.equal(validAtLimits.name.length, 50)
+  assert.equal(validAtLimits.items.length, 500)
 
   assert.deepEqual(
     validateListDraft(
@@ -94,7 +159,7 @@ test('validateListDraft enforces name and item count limits', () => {
       [],
       ''
     ),
-    { ok: false, field: 'name', message: '清单名称最多 20 个字符' }
+    { ok: false, field: 'name', message: '清单名称最多 50 个字符' }
   )
   assert.deepEqual(
     validateListDraft(
@@ -102,7 +167,7 @@ test('validateListDraft enforces name and item count limits', () => {
       [],
       ''
     ),
-    { ok: false, field: 'items', message: '每份清单最多 200 个选项' }
+    { ok: false, field: 'items', message: '每份清单最多 500 个选项' }
   )
 })
 
@@ -128,8 +193,71 @@ test('loadState migrates the legacy menu', () => {
 
   assert.equal(state.version, 2)
   assert.equal(state.lists[0].name, '今天吃什么')
+  assert.equal(state.lists[0].isBuiltIn, false)
   assert.deepEqual(state.lists[0].items, ['面条', '米饭'])
   assert.ok(storage.getItem(STORAGE_KEY))
+})
+
+test('loadState repairs missing built-in markers without overriding explicit values', () => {
+  const storage = createMemoryStorage({
+    [STORAGE_KEY]: JSON.stringify({
+      version: 2,
+      activeListId: 'default',
+      lists: [
+        {
+          id: 'default',
+          name: '今天吃什么',
+          items: ['面条', '米饭']
+        },
+        {
+          id: 'custom',
+          name: '今天吃什么也行',
+          isBuiltIn: false,
+          items: ['火锅', '烤肉']
+        }
+      ]
+    })
+  })
+
+  const state = loadState(storage, 100)
+
+  assert.equal(state.lists[0].isBuiltIn, true)
+  assert.equal(state.lists[1].isBuiltIn, false)
+})
+
+test('loadState keeps an explicit non-built-in marker on the default name', () => {
+  const storage = createMemoryStorage({
+    [STORAGE_KEY]: JSON.stringify({
+      version: 2,
+      activeListId: 'custom',
+      lists: [{
+        id: 'custom',
+        name: '今天吃什么',
+        isBuiltIn: false,
+        items: ['面条', '米饭']
+      }]
+    })
+  })
+
+  const state = loadState(storage, 100)
+
+  assert.equal(state.lists[0].isBuiltIn, false)
+})
+
+test('built-in marker survives renaming, syncing and persistence', () => {
+  const storage = createMemoryStorage()
+  const state = createDefaultState(100, ['A', 'B'])
+  const renamed = {
+    ...state.lists[0],
+    name: '我的晚餐'
+  }
+
+  state.lists[0] = syncListWithDefaultItems(renamed, 200)
+  saveState(storage, state)
+
+  const reloaded = loadState(storage, 300)
+  assert.equal(reloaded.lists[0].name, '我的晚餐')
+  assert.equal(reloaded.lists[0].isBuiltIn, true)
 })
 
 test('loadState keeps valid lists from a partially damaged v2 payload', () => {
@@ -152,6 +280,26 @@ test('loadState keeps valid lists from a partially damaged v2 payload', () => {
 
   assert.equal(state.lists.length, 1)
   assert.equal(state.activeListId, 'valid')
+})
+
+test('loadState keeps a list at the new name and item limits', () => {
+  const items = Array.from(
+    { length: 500 },
+    (_, index) => `选项 ${index + 1}`
+  )
+  const storage = createMemoryStorage({
+    [STORAGE_KEY]: JSON.stringify({
+      version: 2,
+      activeListId: 'large',
+      lists: [{ id: 'large', name: '清'.repeat(50), items }]
+    })
+  })
+
+  const state = loadState(storage, 100)
+
+  assert.equal(state.activeListId, 'large')
+  assert.equal(state.lists[0].name.length, 50)
+  assert.equal(state.lists[0].items.length, 500)
 })
 
 test('loadState removes duplicate ids and names and repairs the active list', () => {

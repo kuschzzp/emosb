@@ -4,18 +4,23 @@
       class="list-dropdown"
       trigger="click"
       :disabled="disabled"
-      @command="$emit('select', $event)"
+      @command="handleCommand"
     >
       <button
         class="list-trigger"
         type="button"
         :disabled="disabled"
-        aria-label="切换决策清单"
-        aria-haspopup="listbox"
+        aria-label="切换或管理决策清单"
+        aria-haspopup="menu"
       >
+        <span class="list-trigger__mark" aria-hidden="true">
+          <i class="el-icon-collection"></i>
+        </span>
         <span class="list-trigger__copy">
           <small>当前清单</small>
-          <strong>{{ currentList.name }}</strong>
+          <span class="list-trigger__title">
+            <strong :title="currentList.name">{{ currentList.name }}</strong>
+          </span>
         </span>
         <span class="list-trigger__count">{{ currentList.items.length }} 项</span>
         <i class="el-icon-arrow-down" aria-hidden="true"></i>
@@ -25,23 +30,38 @@
         <el-dropdown-item
           v-for="list in lists"
           :key="list.id"
-          :command="list.id"
+          :command="{ type: 'select', id: list.id }"
           :class="{ 'is-active': list.id === activeId }"
         >
-          <span class="decision-list-menu__name">{{ list.name }}</span>
-          <small>{{ list.items.length }} 项</small>
+          <span class="decision-list-menu__marker" aria-hidden="true">
+            <i v-if="list.id === activeId" class="el-icon-check"></i>
+          </span>
+          <span class="decision-list-menu__copy">
+            <span class="decision-list-menu__title">
+              <strong class="decision-list-menu__name" :title="list.name">
+                {{ list.name }}
+              </strong>
+            </span>
+            <small>{{ list.items.length }} 项</small>
+          </span>
+        </el-dropdown-item>
+        <el-dropdown-item
+          divided
+          class="decision-list-menu__action"
+          :command="{ type: 'create' }"
+        >
+          <i class="el-icon-plus" aria-hidden="true"></i>
+          <span>新建清单</span>
+        </el-dropdown-item>
+        <el-dropdown-item
+          class="decision-list-menu__action"
+          :command="{ type: 'manage' }"
+        >
+          <i class="el-icon-setting" aria-hidden="true"></i>
+          <span>管理清单</span>
         </el-dropdown-item>
       </el-dropdown-menu>
     </el-dropdown>
-
-    <el-button
-      class="manage-button"
-      icon="el-icon-setting"
-      :disabled="disabled"
-      @click="$emit('manage')"
-    >
-      管理
-    </el-button>
   </div>
 </template>
 
@@ -68,15 +88,24 @@ export default {
         || this.lists[0]
         || { name: '暂无清单', items: [] }
     }
+  },
+  methods: {
+    handleCommand(command) {
+      if (command.type === 'select') {
+        this.$emit('select', command.id)
+      } else if (command.type === 'create') {
+        this.$emit('create')
+      } else if (command.type === 'manage') {
+        this.$emit('manage')
+      }
+    }
   }
 }
 </script>
 
 <style scoped>
 .list-switcher {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
+  display: block;
 }
 
 .list-dropdown {
@@ -85,10 +114,10 @@ export default {
 
 .list-trigger {
   display: flex;
+  width: 286px;
   align-items: center;
-  min-width: 226px;
   height: 58px;
-  padding: 8px 13px 8px 15px;
+  padding: 8px 13px 8px 10px;
   border: 1px solid var(--line);
   border-radius: 10px 4px 10px 4px;
   color: var(--ink);
@@ -96,6 +125,20 @@ export default {
   box-shadow: 0 8px 24px rgba(85, 55, 33, 0.08);
   cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease;
+}
+
+.list-trigger__mark {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  border: 1px solid rgba(214, 80, 50, 0.14);
+  border-radius: 4px 10px 4px 10px;
+  place-items: center;
+  color: var(--tomato-dark);
+  background: var(--wheat-soft);
+  font-size: 16px;
 }
 
 .list-trigger:hover:not(:disabled) {
@@ -134,11 +177,19 @@ export default {
   letter-spacing: 0.08em;
 }
 
+.list-trigger__title {
+  display: flex;
+  width: 132px;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
 .list-trigger__copy strong {
-  display: block;
-  max-width: 110px;
+  min-width: 0;
   overflow: hidden;
   font-size: 14px;
+  flex: 1;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -161,33 +212,6 @@ export default {
   font-size: 12px;
 }
 
-.manage-button.el-button {
-  height: 58px;
-  padding: 0 16px;
-  border-color: var(--line);
-  border-radius: 4px 10px 4px 10px;
-  color: var(--ink-soft);
-  background: rgba(255, 250, 242, 0.66);
-  font-weight: 700;
-  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease, transform 160ms ease;
-}
-
-.manage-button.el-button:hover,
-.manage-button.el-button:focus {
-  border-color: var(--tomato);
-  color: var(--tomato-dark);
-  background: var(--paper-soft);
-}
-
-.manage-button.el-button:active {
-  transform: translateY(1px);
-}
-
-.manage-button.el-button:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
-}
-
 @media (max-width: 767px) {
   .list-switcher {
     width: 100%;
@@ -200,26 +224,17 @@ export default {
 
   .list-trigger {
     width: 100%;
-    min-width: 0;
     height: 54px;
   }
 
-  .list-trigger__copy strong {
-    max-width: min(34vw, 150px);
-  }
-
-  .manage-button.el-button {
-    height: 54px;
+  .list-trigger__title {
+    width: min(52vw, 220px);
   }
 }
 
 @media (max-width: 420px) {
   .list-trigger__count {
     display: none;
-  }
-
-  .manage-button.el-button {
-    padding: 0 13px;
   }
 }
 </style>
