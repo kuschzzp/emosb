@@ -2,7 +2,6 @@
   <section class="history-strip" aria-labelledby="history-title">
     <header class="history-header">
       <div>
-        <span class="section-kicker">RECENT PICKS</span>
         <h2 id="history-title">最近抽到</h2>
       </div>
       <button
@@ -21,7 +20,8 @@
         :key="`${item}-${index}`"
         class="history-item"
       >
-        <small>{{ String(index + 1).padStart(2, '0') }}</small>
+        <img :src="theme.image" alt="" width="54" height="48">
+        <small class="sr-only">第 {{ index + 1 }} 条</small>
         <span>{{ item }}</span>
       </li>
     </ol>
@@ -42,6 +42,7 @@
 export default {
   name: 'HistoryStrip',
   props: {
+    theme: { type: Object, required: true },
     history: {
       type: Array,
       required: true
@@ -51,145 +52,19 @@ export default {
 </script>
 
 <style scoped>
-.history-strip {
-  margin-top: 72px;
-  padding-top: 30px;
-  border-top: 1px solid var(--line);
-}
-
-.history-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.history-header h2 {
-  margin: 7px 0 0;
-  font-family: var(--serif);
-  font-size: 25px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.text-button {
-  min-height: 40px;
-  padding: 0 3px;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  color: var(--ink-muted);
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  transition: color 160ms ease, border-color 160ms ease;
-}
-
-.text-button:hover {
-  border-bottom-color: var(--tomato);
-  color: var(--tomato-dark);
-}
-
-.text-button:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
-}
-
-.history-list {
-  display: grid;
-  margin: 22px 0 0;
-  padding: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  list-style: none;
-}
-
-.history-item {
-  display: flex;
-  min-width: 0;
-  min-height: 54px;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--line-soft);
-  align-items: center;
-  gap: 13px;
-  color: var(--ink-soft);
-}
-
-.history-item:nth-child(odd) {
-  border-right: 1px solid var(--line-soft);
-}
-
-.history-item small {
-  flex: 0 0 auto;
-  color: var(--tomato);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.history-item span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-.history-empty {
-  display: flex;
-  min-height: 92px;
-  margin-top: 22px;
-  padding: 19px 20px;
-  border: 1px dashed rgba(91, 62, 42, 0.24);
-  border-radius: 4px 14px 4px 14px;
-  align-items: center;
-  gap: 15px;
-  color: var(--ink-muted);
-  background: rgba(255, 250, 242, 0.44);
-}
-
-.history-empty__icon {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  place-items: center;
-  color: var(--tomato);
-  background: var(--wheat-soft);
-  font-size: 18px;
-}
-
-.history-empty strong,
-.history-empty small {
-  display: block;
-}
-
-.history-empty strong {
-  margin-bottom: 4px;
-  color: var(--ink-soft);
-  font-size: 14px;
-}
-
-.history-empty small {
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-@media (max-width: 767px) {
-  .history-strip {
-    margin-top: 54px;
-    padding-top: 25px;
-  }
-
-  .history-list {
-    grid-template-columns: 1fr;
-  }
-
-  .history-item:nth-child(odd) {
-    border-right: 0;
-  }
-
-  .history-empty {
-    padding: 17px;
-  }
-}
+.history-strip { display: grid; grid-template-columns: 185px minmax(0, 1fr); align-items: center; gap: 28px; padding-top: 30px; border-top: 1px solid var(--line); }
+.history-header { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.history-header h2 { margin: 0; font-size: 25px; font-weight: 900; white-space: nowrap; }
+.text-button { min-height: 36px; padding: 4px 0; border: 0; background: transparent; color: var(--ink-muted); cursor: pointer; font-size: 12px; }
+.text-button:hover { color: var(--tomato-dark); }
+.history-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.history-item { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-soft); }
+.history-item img { flex: 0 0 auto; object-fit: contain; }
+.history-item span { overflow-wrap: anywhere; font-size: 17px; font-weight: 750; line-height: 1.4; }
+.history-empty { display: flex; align-items: center; gap: 14px; padding: 14px 0; color: var(--ink-muted); }
+.history-empty__icon { font-size: 28px; }
+.history-empty strong, .history-empty small { display: block; font-weight: 400; line-height: 1.7; }
+.history-empty strong { font-size: 15px; } .history-empty small { font-size: 13px; }
+@media (max-width: 1000px) { .history-strip { gap: 20px; grid-template-columns: 130px minmax(0, 1fr); } .history-item { padding: 8px 12px; gap: 7px; } .history-item img { width: 36px; height: 36px; } .history-item span { font-size: 14px; } .history-header h2 { font-size: 22px; } }
+@media (max-width: 767px) { .history-strip { display: block; padding-top: 22px; } .history-header { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 16px; } .history-header h2 { font-size: 21px; } .history-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .history-item { min-height: 58px; } .history-empty { padding-top: 0; } }
 </style>

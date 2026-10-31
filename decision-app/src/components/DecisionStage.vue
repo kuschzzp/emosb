@@ -1,38 +1,31 @@
 <template>
-  <section
-    class="decision-stage"
-    :class="{ 'is-running': isRunning, 'has-result': hasResult }"
-    aria-labelledby="decision-stage-label"
-  >
-    <div class="decision-stage__shadow" aria-hidden="true"></div>
-    <div class="decision-stage__paper">
-      <span id="decision-stage-label" class="decision-stage__label">
-        {{ statusLabel }}
-      </span>
-      <div
-        :key="displayValue"
-        class="decision-stage__value"
-        :aria-hidden="isRunning ? 'true' : 'false'"
-      >
-        {{ displayValue || '准备好了吗？' }}
-      </div>
-      <p>{{ helperText }}</p>
-      <span class="decision-stage__stamp" aria-hidden="true">GOOD<br>LUCK</span>
+  <section class="decision-stage" :class="{ 'is-running': isRunning, 'has-result': hasResult }" aria-labelledby="page-title">
+    <div class="decision-copy">
+      <h1 id="page-title" :class="{ 'long-title': listName.length > 10 }">{{ headline }}</h1>
+      <p class="hero-description">{{ theme.description }}</p>
+      <slot></slot>
+      <button class="draw-button" type="button" :disabled="isRunning" @click="$emit('draw')">
+        <span>{{ buttonLabel }}</span>
+        <i :class="isRunning ? 'el-icon-loading' : 'el-icon-right'" aria-hidden="true"></i>
+      </button>
+      <p class="fairness-note">公平随机，每个选项都有机会。</p>
     </div>
 
-    <el-button
-      class="draw-button"
-      :loading="isRunning"
-      :disabled="isRunning"
-      @click="$emit('draw')"
-    >
-      <span>{{ buttonLabel }}</span>
-      <i v-if="!isRunning" class="el-icon-right" aria-hidden="true"></i>
-    </el-button>
-
-    <p class="sr-only" aria-live="polite">
-      {{ hasResult ? `已选中${displayValue}` : '' }}
-    </p>
+    <div class="ticket-stage">
+      <img class="ticket-background" src="/illustrations/card-stack.webp" alt="" width="600" height="700">
+      <div class="ticket-content">
+        <span class="ticket-heading">{{ isRunning ? '好运正在靠近' : hasResult ? theme.resultLabel : theme.waitingLabel }}</span>
+        <img :key="theme.id" class="theme-illustration" :src="theme.image" alt="" width="220" height="180">
+        <div v-if="hasResult || isRunning" class="ticket-answer" :class="{ 'long-answer': displayValue.length > 12 }" :aria-hidden="isRunning ? 'true' : 'false'">{{ displayValue }}</div>
+        <span v-else class="ticket-pending">未揭晓</span>
+        <p v-if="hasResult" class="ticket-source">来自「{{ listName }}」</p>
+        <span v-if="isRunning" class="ticket-progress" aria-hidden="true">让手气再转一会儿…</span>
+      </div>
+      <button class="pull-button" type="button" :disabled="isRunning" :aria-label="isRunning ? '正在抽取' : hasResult ? '拉签，再抽一次' : '拉签，抽一个答案'" @click="$emit('draw')">
+        {{ isRunning ? '抽取中' : hasResult ? '再抽一次' : '拉签' }}<i class="el-icon-bottom" aria-hidden="true"></i>
+      </button>
+    </div>
+    <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ hasResult ? `${theme.resultLabel}：${displayValue}` : isRunning ? '正在抽取，请稍候' : '' }}</p>
   </section>
 </template>
 
@@ -40,259 +33,67 @@
 export default {
   name: 'DecisionStage',
   props: {
-    listName: {
-      type: String,
-      required: true
-    },
-    displayValue: {
-      type: String,
-      default: ''
-    },
-    isRunning: {
-      type: Boolean,
-      default: false
-    },
-    hasResult: {
-      type: Boolean,
-      default: false
-    }
+    listName: { type: String, required: true },
+    theme: { type: Object, required: true },
+    displayValue: { type: String, default: '' },
+    isRunning: { type: Boolean, default: false },
+    hasResult: { type: Boolean, default: false }
   },
   computed: {
-    statusLabel() {
-      if (this.isRunning) return '答案正在靠近'
-      if (this.hasResult) return '这次就选它'
-      return '等待你的选择'
-    },
-    helperText() {
-      if (this.isRunning) return '别急，让好运多转一会儿。'
-      if (this.hasResult) return `来自「${this.listName}」`
-      return '点一下按钮，把纠结交给手气。'
-    },
+    headline() { return this.listName === '今天吃什么' ? '今天吃什么？' : this.listName },
     buttonLabel() {
       if (this.isRunning) return '正在替你选…'
-      if (this.hasResult) return '再来一次'
-      return '开始抽取'
+      return this.hasResult ? '再抽一次' : this.theme.buttonLabel
     }
   }
 }
 </script>
 
 <style scoped>
-.decision-stage {
-  position: relative;
-  margin-top: 34px;
+.decision-stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 14px; min-height: 680px; padding: 14px 0 50px; }
+.decision-copy { position: relative; z-index: 2; padding-left: 6px; }
+h1 { margin: 0 0 22px; font-size: clamp(44px, 7.5vw, 110px); font-weight: 950; text-shadow: 1.2px 0 currentColor, -1.2px 0 currentColor; letter-spacing: -0.065em; line-height: 1.18; overflow-wrap: anywhere; }
+h1.long-title { text-shadow: none; font-size: clamp(34px, 4vw, 58px); letter-spacing: -0.025em; }
+.hero-description { margin: 0; font-size: clamp(17px, 2vw, 25px); font-weight: 650; line-height: 1.7; }
+.draw-button { display: flex; align-items: center; justify-content: center; gap: 24px; width: 100%; min-height: 94px; margin: 26px 0 0; padding: 18px 24px; border: 3px solid var(--ink); border-radius: 32px; color: var(--ink); background: var(--tomato); box-shadow: 7px 7px 0 var(--peach); cursor: pointer; font-size: clamp(23px, 2.7vw, 36px); font-weight: 900; transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.draw-button:hover:not(:disabled) { background: #ff7957; transform: translate(-2px, -2px); box-shadow: 9px 9px 0 var(--peach); }
+.draw-button:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: 2px 2px 0 var(--peach); }
+.draw-button i { font-size: 1.2em; }
+.fairness-note { margin: 24px 0 0 16px; color: var(--ink-muted); font-size: 16px; }
+.ticket-stage { position: relative; width: 100%; aspect-ratio: 6 / 7; max-width: 600px; justify-self: center; }
+.ticket-background { width: 100%; height: 100%; object-fit: contain; display: block; }
+.ticket-content { position: absolute; top: 15%; left: 20%; width: 61%; height: 63%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 10px; transform: rotate(5deg); text-align: center; }
+.ticket-heading { font-size: clamp(17px, 2.9vw, 40px); font-weight: 900; line-height: 1.4; }
+.theme-illustration { width: 76%; height: 48%; object-fit: contain; margin: 16px 0; transition: width 300ms ease, height 300ms ease, margin 300ms ease; }
+.ticket-pending { margin-top: 6px; font-size: clamp(17px, 2.2vw, 28px); font-weight: 850; }
+.ticket-answer { width: 100%; overflow-wrap: anywhere; max-height: 55%; overflow-y: auto; padding: 0 6px; font-size: clamp(22px, 3.4vw, 46px); font-weight: 950; line-height: 1.35; }
+.ticket-answer.long-answer { font-size: clamp(18px, 2.2vw, 29px); }
+.ticket-source { max-width: 100%; margin: 14px 0 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.has-result .theme-illustration, .is-running .theme-illustration { width: 24%; height: 18%; margin: 12px 0; }
+.ticket-progress { margin-top: 16px; font-size: 13px; }
+.pull-button { position: absolute; bottom: 7%; left: 40%; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 28%; min-height: 54px; padding: 12px 16px; border: 3px solid var(--ink); border-radius: 14px; color: var(--ink); background: var(--tomato); font-size: 19px; font-weight: 900; cursor: pointer; transform: rotate(5deg); transition: transform 160ms ease, background-color 160ms ease; }
+.pull-button:hover:not(:disabled) { background: #ff7957; transform: rotate(5deg) translateY(4px); }
+.is-running .ticket-stage { animation: shuffle 280ms ease-in-out infinite alternate; }
+.has-result .ticket-answer { animation: reveal 350ms ease-out; }
+@keyframes shuffle { from { transform: rotate(-2deg) translateY(-3px); } to { transform: rotate(2deg) translateY(3px); } }
+@keyframes reveal { from { opacity: 0; transform: translateY(10px) scale(.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (min-width: 1100px) { .ticket-stage { top: -30px; width: 110%; max-width: 660px; margin: -35px 0; } }
+@media (max-width: 1000px) and (min-width: 768px) {
+ .decision-stage { min-height: 580px; padding-bottom: 34px; gap: 0; } h1 { font-size: 6.1vw; text-shadow: none; } .draw-button { min-height: 76px; font-size: 25px; border-radius: 24px; } .pull-button { min-height: 44px; padding: 7px 10px; font-size: 14px; } .ticket-content { padding: 6px; } .ticket-source { font-size: 11px; }
 }
-
-.decision-stage__shadow {
-  position: absolute;
-  z-index: 0;
-  top: 13px;
-  right: -13px;
-  bottom: 80px;
-  left: 13px;
-  border-radius: 5px 28px 5px 28px;
-  background: var(--wheat);
-  opacity: 0.86;
-  transform: rotate(0.6deg);
-}
-
-.decision-stage__paper {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  min-height: 285px;
-  padding: 48px 58px;
-  border: 1px solid var(--line);
-  border-radius: 5px 28px 5px 28px;
-  align-items: center;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
-  background:
-    linear-gradient(rgba(255, 250, 242, 0.94), rgba(255, 250, 242, 0.94)),
-    repeating-linear-gradient(0deg, rgba(91, 62, 42, 0.03) 0, rgba(91, 62, 42, 0.03) 1px, transparent 1px, transparent 4px);
-  box-shadow: var(--shadow-soft);
-  text-align: center;
-}
-
-.decision-stage__paper::before,
-.decision-stage__paper::after {
-  position: absolute;
-  top: 50%;
-  width: 22px;
-  height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--paper);
-  content: '';
-  transform: translateY(-50%);
-}
-
-.decision-stage__paper::before {
-  left: -12px;
-}
-
-.decision-stage__paper::after {
-  right: -12px;
-}
-
-.decision-stage__label {
-  color: var(--tomato);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.2em;
-}
-
-.decision-stage__value {
-  max-width: 100%;
-  margin: 21px 0 17px;
-  overflow-wrap: anywhere;
-  color: var(--tomato-dark);
-  font-family: var(--serif);
-  font-size: clamp(42px, 8vw, 72px);
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
-}
-
-.decision-stage__paper p {
-  margin: 0;
-  color: var(--ink-muted);
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.decision-stage__stamp {
-  position: absolute;
-  right: 25px;
-  bottom: 22px;
-  display: grid;
-  width: 54px;
-  height: 54px;
-  border: 1px solid rgba(214, 80, 50, 0.26);
-  border-radius: 50%;
-  place-items: center;
-  color: rgba(175, 56, 36, 0.48);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  line-height: 1.15;
-  transform: rotate(-12deg);
-}
-
-.draw-button.el-button {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  width: min(100%, 350px);
-  min-height: 56px;
-  margin: 36px auto 0;
-  border: 1px solid var(--tomato-dark);
-  border-radius: 5px 14px 5px 14px;
-  align-items: center;
-  justify-content: center;
-  color: #fffaf2;
-  background: var(--tomato);
-  box-shadow: 0 12px 24px rgba(175, 56, 36, 0.22);
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
-}
-
-.draw-button.el-button:hover,
-.draw-button.el-button:focus {
-  border-color: #8e291c;
-  color: #fffaf2;
-  background: var(--tomato-dark);
-  box-shadow: 0 15px 28px rgba(175, 56, 36, 0.28);
-  transform: translateY(-2px);
-}
-
-.draw-button.el-button:active {
-  box-shadow: 0 7px 16px rgba(175, 56, 36, 0.2);
-  transform: translateY(1px);
-}
-
-.draw-button.el-button:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 4px;
-}
-
-.draw-button.el-button.is-disabled,
-.draw-button.el-button.is-disabled:hover {
-  border-color: #c68c79;
-  color: rgba(255, 250, 242, 0.9);
-  background: #c77e67;
-  box-shadow: none;
-  transform: none;
-}
-
-.draw-button .el-icon-right {
-  margin-left: 12px;
-  font-weight: 800;
-}
-
-.has-result .decision-stage__value {
-  animation: result-enter 360ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.is-running .decision-stage__value {
-  color: var(--ink);
-  font-family: var(--sans);
-  font-size: clamp(34px, 7vw, 62px);
-  letter-spacing: -0.02em;
-}
-
-@keyframes result-enter {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @media (max-width: 767px) {
-  .decision-stage {
-    margin-top: 26px;
-  }
-
-  .decision-stage__shadow {
-    right: -7px;
-    bottom: 74px;
-    left: 7px;
-  }
-
-  .decision-stage__paper {
-    min-height: 248px;
-    padding: 38px 24px 48px;
-  }
-
-  .decision-stage__value {
-    margin-top: 18px;
-    font-size: clamp(36px, 12vw, 54px);
-  }
-
-  .decision-stage__stamp {
-    right: 17px;
-    bottom: 15px;
-    width: 46px;
-    height: 46px;
-  }
-
-  .draw-button.el-button {
-    width: 100%;
-    min-height: 54px;
-    margin-top: 28px;
-  }
+ .decision-stage { grid-template-columns: minmax(0, 1fr); min-height: auto; gap: 14px; padding: 28px 0 34px; }
+ .decision-copy { display: contents; }
+ h1 { grid-row: 1; margin: 0; font-size: clamp(36px, 10vw, 62px); letter-spacing: -0.045em; }
+ h1.long-title { font-size: 34px; }
+ .hero-description { grid-row: 2; font-size: 16px; margin: 0; }
+ .decision-copy ::v-deep .list-controls { grid-row: 3; margin-top: 8px; }
+ .ticket-stage { grid-row: 4; width: min(400px, 100%); }
+ .draw-button { grid-row: 5; min-height: 70px; margin: 0; border-radius: 23px; font-size: 25px; box-shadow: 5px 5px 0 var(--peach); }
+ .fairness-note { grid-row: 6; margin: 8px 0 0; text-align: center; font-size: 13px; }
+ .ticket-heading { font-size: 24px; } .ticket-pending { font-size: 22px; } .ticket-answer { font-size: 30px; } .ticket-answer.long-answer { font-size: 20px; }
+ .pull-button { min-height: 44px; padding: 8px 12px; font-size: 15px; border-width: 2px; }
+ .ticket-source { font-size: 11px; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .has-result .decision-stage__value {
-    animation: none;
-  }
-}
+@media (prefers-reduced-motion: reduce) { .ticket-stage, .ticket-answer { animation: none !important; } .theme-illustration { transition: none; } }
 </style>

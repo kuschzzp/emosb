@@ -7,6 +7,7 @@
     :with-header="false"
     :wrapper-closable="true"
     :close-on-press-escape="true"
+    :before-close="beforeClose"
     size="68%"
     append-to-body
     @update:visible="$emit('update:visible', $event)"
@@ -14,7 +15,7 @@
     <div class="drawer-layout">
       <header class="drawer-header">
         <div class="drawer-header__copy">
-          <span class="section-kicker">YOUR LISTS</span>
+          <span class="section-kicker">让每份清单，都有自己的手气</span>
           <h2>管理清单</h2>
           <p>把想法写下来，剩下的交给手气。</p>
         </div>
@@ -22,7 +23,7 @@
           type="button"
           class="icon-button"
           aria-label="关闭清单管理"
-          @click="$emit('update:visible', false)"
+          @click="requestClose"
         >
           <i class="el-icon-close" aria-hidden="true"></i>
         </button>
@@ -38,23 +39,22 @@
           <button
             type="button"
             class="create-list-button"
-            @click="$emit('create')"
+            @click="requestCreate"
           >
             <i class="el-icon-plus" aria-hidden="true"></i>
             <span>新建清单</span>
           </button>
 
-          <div class="drawer-list" role="listbox" aria-label="决策清单">
+          <div class="drawer-list" role="group" aria-label="决策清单">
             <button
               v-for="list in lists"
               :key="list.id"
               type="button"
-              role="option"
               class="drawer-list-item"
               :class="{ 'is-active': list.id === activeId }"
-              :aria-selected="list.id === activeId ? 'true' : 'false'"
+              :aria-pressed="list.id === activeId ? 'true' : 'false'"
               :title="list.name"
-              @click="$emit('select', list.id)"
+              @click="requestSelect(list.id)"
             >
               <span class="drawer-list-item__marker" aria-hidden="true">
                 <i v-if="list.id === activeId" class="el-icon-check"></i>
@@ -120,6 +120,28 @@
               </p>
             </div>
 
+            <fieldset class="theme-field">
+              <legend>卡面主题 <span>可选</span></legend>
+              <p class="field-help">只改变插画和文案，不影响抽取规则。</p>
+              <div class="theme-options">
+                <label
+                  v-for="theme in themes"
+                  :key="theme.id"
+                  class="theme-option"
+                  :class="{ 'is-selected': draftTheme === theme.id }"
+                >
+                  <input
+                    v-model="draftTheme"
+                    type="radio"
+                    name="card-theme"
+                    :value="theme.id"
+                  >
+                  <img :src="theme.image" alt="" width="64" height="48">
+                  <span>{{ theme.name }}</span>
+                </label>
+              </div>
+            </fieldset>
+
             <div class="field-group" :class="{ 'has-error': itemsError }">
               <div class="field-heading">
                 <label for="list-items">候选项</label>
@@ -149,9 +171,9 @@
             <el-button
               class="sync-button"
               icon="el-icon-refresh"
-              @click="$emit('sync-defaults', activeId)"
+              @click="requestSync"
             >
-              同步默认菜单
+              恢复默认菜品
             </el-button>
             <el-button class="save-button" type="primary" @click="save">
               保存修改
@@ -170,30 +192,26 @@ const {
   normalizeItems,
   validateListDraft
 } = require('../utils/storage')
+const { THEMES, getTheme } = require('../utils/themes')
 
 export default {
   name: 'MenuModal',
   props: {
-    visible: {
-      type: Boolean,
-      required: true
-    },
-    lists: {
-      type: Array,
-      required: true
-    },
-    activeId: {
-      type: String,
-      required: true
-    }
+    visible: { type: Boolean, required: true },
+    lists: { type: Array, required: true },
+    activeId: { type: String, required: true }
   },
   data() {
     return {
       maxListNameLength: MAX_LIST_NAME_LENGTH,
       maxListItems: MAX_LIST_ITEMS,
+      themes: THEMES,
       draftName: '',
       draftItems: '',
-      submitted: false
+      draftTheme: 'general',
+      savedDraft: '',
+      submitted: false,
+      confirmingDiscard: false
     }
   },
   computed: {
@@ -203,48 +221,91 @@ export default {
     normalizedCount() {
       return normalizeItems(this.draftItems).length
     },
+    draftSnapshot() {
+      return JSON.stringify([this.draftName, this.draftItems, this.draftTheme])
+    },
+    isDirty() {
+      return this.draftSnapshot !== this.savedDraft
+    },
     validation() {
       return validateListDraft(
-        { name: this.draftName, itemsText: this.draftItems },
+        { name: this.draftName, itemsText: this.draftItems, theme: this.draftTheme },
         this.lists,
         this.activeId
       )
     },
     nameError() {
       return this.submitted && this.validation.field === 'name'
-        ? this.validation.message
-        : ''
+        ? this.validation.message : ''
     },
     itemsError() {
       return this.submitted && this.validation.field === 'items'
-        ? this.validation.message
-        : ''
+        ? this.validation.message : ''
     }
   },
   watch: {
     activeList: {
       immediate: true,
-      handler(list) {
-        this.draftName = list ? list.name : ''
-        this.draftItems = list ? list.items.join('\n') : ''
-        this.submitted = false
-      }
+      handler() { this.resetDraft() }
+    },
+    visible(value) {
+      if (value) this.resetDraft()
     }
   },
   methods: {
-    save() {
-      this.submitted = true
-
-      if (!this.validation.ok) {
-        return
+    resetDraft() {
+      const list = this.activeList
+      this.draftName = list ? list.name : ''
+      this.draftItems = list ? list.items.join('\n') : ''
+      this.draftTheme = getTheme(list && list.theme).id
+      this.submitted = false
+      this.savedDraft = this.draftSnapshot
+    },
+    async allowDiscard() {
+      if (!this.isDirty) return true
+      if (this.confirmingDiscard) return false
+      this.confirmingDiscard = true
+      try {
+        await this.$confirm('这份清单还有未保存的修改，离开后将丢弃这些修改。', '放弃修改？', {
+          confirmButtonText: '放弃修改',
+          cancelButtonText: '继续编辑',
+          type: 'warning',
+          customClass: 'decision-confirm'
+        })
+        return true
+      } catch {
+        return false
+      } finally {
+        this.confirmingDiscard = false
       }
-
+    },
+    async beforeClose(done) {
+      if (await this.allowDiscard()) done()
+    },
+    requestClose() {
+      this.beforeClose(() => this.$emit('update:visible', false))
+    },
+    async requestSelect(id) {
+      if (id === this.activeId) return
+      if (await this.allowDiscard()) this.$emit('select', id)
+    },
+    async requestCreate() {
+      if (await this.allowDiscard()) this.$emit('create')
+    },
+    async requestSync() {
+      if (await this.allowDiscard()) this.$emit('sync-defaults', this.activeId)
+    },
+    async save() {
+      this.submitted = true
+      if (!this.validation.ok) return
       this.$emit('save', {
         id: this.activeId,
         name: this.validation.name,
-        itemsText: this.validation.items.join('\n')
+        itemsText: this.validation.items.join('\n'),
+        theme: this.draftTheme
       })
-      this.submitted = false
+      await this.$nextTick()
+      this.resetDraft()
     }
   }
 }
@@ -271,7 +332,7 @@ export default {
 
 .drawer-header h2 {
   margin: 8px 0 7px;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 29px;
   line-height: 1.1;
 }
@@ -290,7 +351,7 @@ export default {
   height: 42px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 4px 10px 4px 10px;
+  border-radius: 12px;
   place-items: center;
   color: var(--ink-soft);
   background: transparent;
@@ -315,7 +376,7 @@ export default {
   display: grid;
   flex: 1;
   min-height: 0;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
 }
 
 .drawer-sidebar {
@@ -324,7 +385,7 @@ export default {
   padding: 22px 18px 20px;
   border-right: 1px solid var(--line);
   flex-direction: column;
-  background: #f7ecdc;
+  background: var(--paper);
 }
 
 .drawer-sidebar__heading,
@@ -345,7 +406,7 @@ export default {
 .field-heading > span {
   color: var(--ink-muted);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .create-list-button {
@@ -354,8 +415,8 @@ export default {
   min-height: 44px;
   margin: 14px 0 12px;
   padding: 0 13px;
-  border: 1px dashed rgba(214, 80, 50, 0.42);
-  border-radius: 4px 10px 4px 10px;
+  border: 2px dashed var(--ink);
+  border-radius: 12px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -390,7 +451,7 @@ export default {
   min-height: 62px;
   padding: 10px 11px;
   border: 1px solid transparent;
-  border-radius: 4px 10px 4px 10px;
+  border-radius: 12px;
   align-items: center;
   gap: 9px;
   color: var(--ink-soft);
@@ -413,10 +474,10 @@ export default {
 }
 
 .drawer-list-item.is-active {
-  border-color: var(--tomato);
-  color: var(--tomato-dark);
-  background: var(--wheat-soft);
-  box-shadow: inset 3px 0 0 var(--tomato);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  background: #d9c9f4;
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
 .drawer-list-item__marker {
@@ -429,7 +490,7 @@ export default {
   place-items: center;
   color: var(--tomato-dark);
   background: rgba(255, 250, 242, 0.62);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .drawer-list-item.is-active .drawer-list-item__marker {
@@ -467,14 +528,14 @@ export default {
 .drawer-list-item__copy small {
   margin-top: 4px;
   color: var(--ink-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .drawer-sidebar .delete-button {
   width: 100%;
   min-height: 44px;
   margin: 14px 0 0;
-  border-radius: 4px 10px 4px 10px;
+  border-radius: 12px;
 }
 
 .drawer-editor {
@@ -499,7 +560,7 @@ export default {
   display: block;
   margin-bottom: 4px;
   color: var(--ink-muted);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
 }
@@ -515,7 +576,7 @@ export default {
   min-width: 0;
   overflow: hidden;
   flex: 1;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 18px;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -529,7 +590,7 @@ export default {
   color: #74421f;
   background: var(--wheat-soft);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -556,8 +617,8 @@ export default {
 
 .editor-form ::v-deep .el-input__inner,
 .editor-form ::v-deep .el-textarea__inner {
-  border-color: var(--line);
-  border-radius: 4px 10px 4px 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 12px;
   color: var(--ink);
   background: #fffdf8;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
@@ -568,7 +629,7 @@ export default {
 }
 
 .editor-form ::v-deep .el-textarea__inner {
-  min-height: 290px !important;
+  min-height: 230px !important;
   padding: 14px 15px;
   line-height: 1.75;
 }
@@ -593,7 +654,7 @@ export default {
 .field-help,
 .field-error {
   margin: 8px 2px 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -624,7 +685,7 @@ export default {
 .drawer-sidebar .el-button {
   min-height: 48px;
   margin: 0;
-  border-radius: 4px 11px 4px 11px;
+  border-radius: 12px;
   font-weight: 800;
 }
 
@@ -655,16 +716,17 @@ export default {
 }
 
 .save-button.el-button {
-  border-color: var(--tomato-dark);
-  color: #fffaf2;
+  border: 2px solid var(--ink);
+  color: var(--ink);
   background: var(--tomato);
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
 .save-button.el-button:hover,
 .save-button.el-button:focus {
-  border-color: #8e291c;
-  color: #fffaf2;
-  background: var(--tomato-dark);
+  border-color: var(--ink);
+  color: var(--ink);
+  background: #ff8766;
 }
 
 .drawer-actions .el-button:focus-visible,
@@ -740,5 +802,58 @@ export default {
     padding-right: 20px;
     padding-left: 20px;
   }
+}
+
+.drawer-header { border-bottom: 2px solid var(--ink); }
+.drawer-header h2 { font-weight: 900; }
+.drawer-header p { font-size: 14px; }
+.drawer-sidebar { border-right: 2px solid var(--ink); }
+.drawer-actions { border-top: 2px solid var(--ink); background: var(--paper-soft); box-shadow: none; }
+.drawer-actions .el-button, .drawer-sidebar .el-button { border-width: 1.5px; }
+.icon-button { border: 2px solid var(--ink); }
+.field-heading label { font-size: 14px; }
+.theme-field { min-width: 0; margin: 24px 0; padding: 0; border: 0; }
+.theme-field legend { padding: 0; font-size: 14px; font-weight: 800; }
+.theme-field legend > span { margin-left: 5px; color: var(--ink-muted); font-size: 12px; font-weight: 400; }
+.theme-field .field-help { margin-top: 5px; }
+.theme-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.theme-option {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  padding: 16px 4px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  background: #fffdf5;
+  cursor: pointer;
+}
+.theme-option input { position: absolute; top: 7px; left: 7px; width: 14px; height: 14px; margin: 0; accent-color: #594094; }
+.theme-option img { width: 58px; height: 48px; object-fit: contain; }
+.theme-option > span { font-size: 12px; font-weight: 700; }
+.theme-option:hover { border-color: var(--ink); }
+.theme-option.is-selected { border-color: var(--ink); background: #e6dbfb; box-shadow: 2px 2px 0 var(--ink); }
+.theme-option:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 767px) {
+  .drawer-sidebar { border-right: 0; }
+  .drawer-header { padding-top: calc(18px + env(safe-area-inset-top)); padding-bottom: 16px; }
+  .drawer-header .section-kicker { display: none; }
+  .drawer-header h2 { font-size: 26px; }
+  .drawer-header p { font-size: 13px; }
+  .drawer-sidebar { max-height: 210px; padding: 12px 18px; }
+  .drawer-sidebar__heading { display: none; }
+  .drawer-sidebar { grid-template-rows: minmax(58px, 1fr) 40px; gap: 8px; }
+  .drawer-list { flex-direction: row; grid-row: 1; overflow-x: auto; overflow-y: hidden; }
+  .drawer-list-item { flex: 0 0 160px; }
+  .create-list-button, .drawer-sidebar .delete-button { grid-row: 2; min-height: 40px; }
+  .editor-header { min-height: 60px; }
+  .editor-form { padding: 18px; }
+  .drawer-actions { padding: 14px 18px calc(14px + env(safe-area-inset-bottom)); }
+  .drawer-actions .el-button { padding: 10px; font-size: 13px; }
+  .theme-options { gap: 5px; }
+  .theme-option img { width: 42px; height: 40px; }
+  .theme-option > span { font-size: 11px; }
 }
 </style>

@@ -1,3 +1,5 @@
+const { getTheme } = require('./themes')
+
 const STORAGE_KEY = 'decision_app_state_v2'
 const LEGACY_STORAGE_KEY = 'chishenme_menu'
 const MAX_HISTORY = 6
@@ -231,7 +233,14 @@ function validateListDraft(draft, lists = [], currentId = '') {
     }
   }
 
-  return { ok: true, name, items }
+  const result = { ok: true, name, items }
+
+  // Keep older callers from accidentally resetting the existing theme.
+  if (Object.prototype.hasOwnProperty.call(draft, 'theme')) {
+    result.theme = getTheme(draft.theme).id
+  }
+
+  return result
 }
 
 function createId(now) {
@@ -239,11 +248,12 @@ function createId(now) {
   return `list-${now}-${suffix}`
 }
 
-function createList(name, items, now = Date.now(), isBuiltIn = false) {
+function createList(name, items, now = Date.now(), isBuiltIn = false, theme) {
   return {
     id: createId(now),
     name: String(name || '').trim(),
     isBuiltIn: Boolean(isBuiltIn),
+    theme: getTheme(theme === undefined ? (isBuiltIn ? 'food' : 'general') : theme).id,
     items: normalizeItems(items),
     history: [],
     createdAt: now,
@@ -291,12 +301,15 @@ function sanitizeList(raw, now) {
     return null
   }
 
+  const isBuiltIn = typeof raw.isBuiltIn === 'boolean'
+    ? raw.isBuiltIn
+    : name === '今天吃什么'
+
   return {
     id: typeof raw.id === 'string' && raw.id ? raw.id : createId(now),
     name,
-    isBuiltIn: typeof raw.isBuiltIn === 'boolean'
-      ? raw.isBuiltIn
-      : name === '今天吃什么',
+    isBuiltIn,
+    theme: getTheme(raw.theme === undefined ? (isBuiltIn ? 'food' : 'general') : raw.theme).id,
     items,
     history: normalizeHistory(raw.history),
     createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : now,

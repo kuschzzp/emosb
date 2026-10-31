@@ -1,22 +1,26 @@
+/* Shared palette for the playful draw-card interface. */
 :root {
-  --paper: #f4ede1;
-  --paper-soft: #fffaf2;
-  --paper-deep: #eadbc7;
-  --ink: #392920;
-  --ink-soft: #5b4639;
-  --ink-muted: #7c6b5f;
-  --tomato: #d65032;
-  --tomato-dark: #a93624;
-  --wheat: #edc96f;
-  --wheat-soft: #f5dfaa;
-  --danger: #ab4534;
-  --line: rgba(91, 62, 42, 0.16);
-  --line-soft: rgba(91, 62, 42, 0.1);
-  --focus: rgba(214, 80, 50, 0.28);
-  --shadow-soft: 0 18px 50px rgba(85, 55, 33, 0.1);
-  --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --serif: Georgia, "Songti SC", STSong, "SimSun", serif;
-  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --paper: #fff5d2;
+  --paper-soft: #fffbee;
+  --paper-deep: #f8e7b2;
+  --ink: #29231f;
+  --ink-soft: #51473a;
+  --ink-muted: #716452;
+  --tomato: #ff704d;
+  --tomato-dark: #973e25;
+  --wheat: #ffd47f;
+  --wheat-soft: #ffedbb;
+  --peach: #f4c17e;
+  --purple: #bda9e9;
+  --purple-dark: #7250b5;
+  --danger: #a33929;
+  --line: rgba(41, 35, 31, .35);
+  --line-soft: rgba(41, 35, 31, .16);
+  --focus: #7250b5;
+  --shadow-soft: 4px 4px 0 #f4c17e;
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --serif: var(--sans);
+  --mono: "SFMono-Regular", Consolas, monospace;
 }
 
 * {
@@ -27,7 +31,7 @@ html {
   min-width: 320px;
   min-height: 100%;
   background: var(--paper);
-  scroll-behavior: smooth;
+
 }
 
 body {
@@ -283,3 +287,20 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Shared controls keep the same ink outline as the draw card. */
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+button:disabled { cursor: not-allowed; opacity: .6; }
+.decision-list-menu.el-dropdown-menu { border: 2px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--peach); }
+.decision-list-menu .el-dropdown-menu__item { border-radius: 8px; font-size: 14px; }
+.decision-list-menu .el-dropdown-menu__item.is-active { background: #e4d9fa; color: var(--ink); }
+.decision-list-menu__name { font-size: 14px; }
+.decision-list-menu small { font-size: 12px; }
+.decision-confirm.el-message-box, .el-message { border: 2px solid var(--ink); border-radius: 16px; box-shadow: 5px 5px 0 var(--peach); }
+.decision-confirm .el-message-box__title { font-weight: 850; }
+.decision-confirm .el-message-box__btns .el-button { border-radius: 10px; }
+.decision-confirm .el-message-box__btns .el-button--primary { color: var(--ink); border: 2px solid var(--ink); background: var(--tomato); }
+.decision-confirm .el-message-box__btns .el-button--primary:hover { color: var(--ink); background: #ff8966; }

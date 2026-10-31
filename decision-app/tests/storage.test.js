@@ -1,5 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const { THEMES, getTheme } = require('../src/utils/themes')
 
 const {
   STORAGE_KEY,
@@ -355,4 +356,65 @@ test('saveState rejects states without a valid list', () => {
     /INVALID_STATE/
   )
   assert.equal(storage.getItem(STORAGE_KEY), null)
+})
+
+test('new custom lists use the general theme even with a food-like name', () => {
+  assert.equal(createList('今天吃什么', ['A', 'B'], 100).theme, 'general')
+  assert.equal(createDefaultState(100).lists[0].theme, 'food')
+  assert.equal(createList('周末去哪', ['A', 'B'], 100, false, 'travel').theme, 'travel')
+})
+
+test('themes migrate from built-in markers without guessing custom list names', () => {
+  const storage = createMemoryStorage({
+    [STORAGE_KEY]: JSON.stringify({
+      version: 2,
+      activeListId: 'built-in',
+      lists: [
+        { id: 'built-in', name: '我的菜单', isBuiltIn: true, items: ['A', 'B'] },
+        { id: 'custom', name: '今天吃什么', isBuiltIn: false, items: ['C', 'D'] },
+        { id: 'travel', name: '周末去哪', items: ['E', 'F'] }
+      ]
+    })
+  })
+
+  assert.deepEqual(loadState(storage, 100).lists.map(list => list.theme), [
+    'food', 'general', 'general'
+  ])
+  assert.equal(JSON.parse(storage.getItem(STORAGE_KEY)).lists[0].theme, 'food')
+
+  const legacyStorage = createMemoryStorage({
+    [LEGACY_STORAGE_KEY]: JSON.stringify(['A', 'B'])
+  })
+  assert.equal(loadState(legacyStorage, 100).lists[0].theme, 'general')
+})
+
+test('each explicit theme survives storage round trips and default item sync', () => {
+  const storage = createMemoryStorage()
+  const lists = THEMES.map((theme, index) => (
+    createList(`清单 ${index}`, ['A', 'B'], 100 + index, false, theme.id)
+  ))
+  const state = { version: 2, activeListId: lists[0].id, lists }
+  saveState(storage, state)
+
+  const reloaded = loadState(storage, 200)
+  assert.deepEqual(reloaded.lists.map(list => list.theme), THEMES.map(theme => theme.id))
+  assert.equal(syncListWithDefaultItems(reloaded.lists[2], 300).theme, 'travel')
+})
+
+test('unknown theme values safely fall back without discarding the list', () => {
+  const storage = createMemoryStorage()
+  const state = createDefaultState(100, ['A', 'B'])
+  state.lists[0].theme = 'unknown'
+  saveState(storage, state)
+
+  assert.equal(loadState(storage, 200).lists[0].theme, 'general')
+  assert.equal(createList('自定义', ['A', 'B'], 100, false, null).theme, 'general')
+  assert.equal(getTheme('__proto__').id, 'general')
+})
+
+test('draft validation normalizes explicit themes and leaves old callers unchanged', () => {
+  const valid = { name: '周末去哪', itemsText: '公园\n书店' }
+  assert.equal(validateListDraft({ ...valid, theme: 'travel' }).theme, 'travel')
+  assert.equal(validateListDraft({ ...valid, theme: 'unknown' }).theme, 'general')
+  assert.equal(Object.prototype.hasOwnProperty.call(validateListDraft(valid), 'theme'), false)
 })

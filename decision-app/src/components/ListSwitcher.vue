@@ -17,7 +17,6 @@
           <i class="el-icon-collection"></i>
         </span>
         <span class="list-trigger__copy">
-          <small>当前清单</small>
           <span class="list-trigger__title">
             <strong :title="currentList.name">{{ currentList.name }}</strong>
           </span>
@@ -104,137 +103,17 @@ export default {
 </script>
 
 <style scoped>
-.list-switcher {
-  display: block;
-}
-
-.list-dropdown {
-  display: block;
-}
-
-.list-trigger {
-  display: flex;
-  width: 286px;
-  align-items: center;
-  height: 58px;
-  padding: 8px 13px 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px 4px 10px 4px;
-  color: var(--ink);
-  background: rgba(255, 250, 242, 0.88);
-  box-shadow: 0 8px 24px rgba(85, 55, 33, 0.08);
-  cursor: pointer;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease;
-}
-
-.list-trigger__mark {
-  display: grid;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
-  margin-right: 10px;
-  border: 1px solid rgba(214, 80, 50, 0.14);
-  border-radius: 4px 10px 4px 10px;
-  place-items: center;
-  color: var(--tomato-dark);
-  background: var(--wheat-soft);
-  font-size: 16px;
-}
-
-.list-trigger:hover:not(:disabled) {
-  border-color: rgba(214, 80, 50, 0.42);
-  background: var(--paper-soft);
-  box-shadow: 0 10px 28px rgba(85, 55, 33, 0.13);
-  transform: translateY(-1px);
-}
-
-.list-trigger:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.list-trigger:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
-}
-
-.list-trigger:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
-}
-
-.list-trigger__copy {
-  min-width: 0;
-  margin-right: auto;
-  text-align: left;
-}
-
-.list-trigger__copy small {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--ink-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.list-trigger__title {
-  display: flex;
-  width: 132px;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-}
-
-.list-trigger__copy strong {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 14px;
-  flex: 1;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.list-trigger__count {
-  flex: 0 0 auto;
-  margin-left: 12px;
-  padding: 5px 7px;
-  border-radius: 4px;
-  color: #74421f;
-  background: var(--wheat-soft);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.list-trigger .el-icon-arrow-down {
-  margin-left: 8px;
-  color: var(--tomato);
-  font-size: 12px;
-}
-
-@media (max-width: 767px) {
-  .list-switcher {
-    width: 100%;
-  }
-
-  .list-dropdown {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .list-trigger {
-    width: 100%;
-    height: 54px;
-  }
-
-  .list-trigger__title {
-    width: min(52vw, 220px);
-  }
-}
-
-@media (max-width: 420px) {
-  .list-trigger__count {
-    display: none;
-  }
-}
+.list-switcher { flex: 1; min-width: 0; }
+.list-dropdown { display: block; }
+.list-trigger { display: flex; align-items: center; width: 100%; min-height: 82px; gap: 12px; padding: 14px 18px; border: 0; color: var(--ink); background: transparent; cursor: pointer; text-align: left; }
+.list-trigger:hover:not(:disabled) { background: var(--wheat-soft); }
+.list-trigger__mark { flex: 0 0 auto; color: var(--tomato-dark); font-size: 28px; }
+.list-trigger__copy { min-width: 0; flex: 0 1 auto; }
+.list-trigger__title { display: block; }
+.list-trigger__title strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; font-weight: 800; }
+.list-trigger__count { flex: 0 0 auto; color: var(--ink-soft); font-size: 16px; white-space: nowrap; }
+.list-trigger .el-icon-arrow-down { flex: 0 0 auto; margin-left: auto; font-size: 14px; }
+@media (max-width: 1000px) { .list-trigger { padding: 12px; gap: 8px; min-height: 68px; } .list-trigger__title strong { font-size: 16px; } .list-trigger__count { font-size: 13px; } .list-trigger__mark { font-size: 23px; } }
+@media (max-width: 767px) { .list-trigger { min-height: 62px; } }
+@media (max-width: 359px) { .list-trigger__count { display: none; } }
 </style>
