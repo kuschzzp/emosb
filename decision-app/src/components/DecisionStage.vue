@@ -88,12 +88,25 @@ h1.long-title { text-shadow: none; font-size: clamp(34px, 4vw, 58px); letter-spa
  h1.long-title { font-size: 34px; }
  .hero-description { grid-row: 2; font-size: 16px; margin: 0; }
  .decision-copy ::v-deep .list-controls { grid-row: 3; margin-top: 8px; }
- .ticket-stage { grid-row: 4; width: min(400px, 100%); }
- .draw-button { grid-row: 5; min-height: 70px; margin: 0; border-radius: 23px; font-size: 25px; box-shadow: 5px 5px 0 var(--peach); }
- .fairness-note { grid-row: 6; margin: 8px 0 0; text-align: center; font-size: 13px; }
+ /* Keep the primary action above the tall ticket and away from browser docks.
+    This also matches the DOM's keyboard and screen-reader order. */
+ .draw-button { grid-row: 4; min-height: 70px; margin: 0; padding: 14px 20px; border-radius: 23px; font-size: 25px; line-height: 1.2; box-shadow: 5px 5px 0 var(--peach); }
+ .draw-button i { line-height: 1; }
+ .fairness-note { grid-row: 5; margin: 8px 0 0; text-align: center; font-size: 13px; }
+ .ticket-stage { grid-row: 6; width: min(340px, 100%); }
  .ticket-heading { font-size: 24px; } .ticket-pending { font-size: 22px; } .ticket-answer { font-size: 30px; } .ticket-answer.long-answer { font-size: 20px; }
  .pull-button { min-height: 44px; padding: 8px 12px; font-size: 15px; border-width: 2px; }
  .ticket-source { font-size: 11px; }
+}
+@media (max-width: 767px) and (max-height: 700px) {
+ .decision-stage { padding-top: 16px; gap: 12px; }
+ .draw-button { min-height: 60px; padding: 12px 20px; font-size: 23px; }
+ .ticket-stage { width: min(280px, 100%); }
+ .ticket-heading { font-size: 21px; }
+ .ticket-content { padding: 8px 6px; }
+ .theme-illustration { margin: 10px 0; }
+ .ticket-answer { font-size: 26px; }
+ .ticket-answer.long-answer { font-size: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .ticket-stage, .ticket-answer { animation: none !important; } .theme-illustration { transition: none; } }
 </style>
